@@ -18,9 +18,8 @@ const users = [
   { name: "anu", password: "anuuthayaa" },
 ];
 
-// 🏠 ROOMS STORE
-const rooms = {}; 
-// { roomId: { currentSong, isPlaying } }
+// 🏠 ROOM STORAGE
+const rooms = {};
 
 // 🔐 LOGIN
 app.post("/login", (req, res) => {
@@ -36,11 +35,9 @@ app.post("/login", (req, res) => {
 // 🎧 SOCKET
 io.on("connection", (socket) => {
 
-  // 🏠 JOIN ROOM
   socket.on("joinRoom", (roomId) => {
     socket.join(roomId);
 
-    // create room if not exists
     if (!rooms[roomId]) {
       rooms[roomId] = {
         currentSong: null,
@@ -48,16 +45,13 @@ io.on("connection", (socket) => {
       };
     }
 
-    // send current state to new user
     socket.emit("roomData", rooms[roomId]);
   });
 
-  // 💬 CHAT
   socket.on("sendMessage", ({ roomId, msg }) => {
     io.to(roomId).emit("receiveMessage", msg);
   });
 
-  // 🎵 PLAY
   socket.on("playSong", ({ roomId, data }) => {
     rooms[roomId].currentSong = data;
     rooms[roomId].isPlaying = true;
@@ -65,16 +59,20 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("playSong", data);
   });
 
-  // ⏸ PAUSE
   socket.on("pauseSong", (roomId) => {
     rooms[roomId].isPlaying = false;
     io.to(roomId).emit("pauseSong");
   });
 
-  // ▶ RESUME
   socket.on("resumeSong", (roomId) => {
     rooms[roomId].isPlaying = true;
-    io.to(roomId).emit("resumeSong");
+
+    // update timestamp so sync continues
+    if (rooms[roomId].currentSong) {
+      rooms[roomId].currentSong.timestamp = Date.now();
+    }
+
+    io.to(roomId).emit("resumeSong", rooms[roomId].currentSong);
   });
 });
 
@@ -84,6 +82,7 @@ app.get("/", (req, res) => {
 });
 
 const PORT = process.env.PORT || 10000;
+
 server.listen(PORT, () => {
   console.log("Server running on " + PORT);
 });
