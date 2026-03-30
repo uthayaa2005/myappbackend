@@ -1,6 +1,7 @@
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
+require("dotenv").config();
 
 const app = express();
 app.use(cors());
@@ -10,17 +11,17 @@ const server = http.createServer(app);
 
 const io = require("socket.io")(server, {
   cors: {
-    origin: "*", // change to frontend URL after deploy
+    origin: "*",
   },
 });
 
-// 💖 USERS (only you two)
+// 💖 USERS
 const users = [
   { name: "uthayaa", password: "anuuthayaa" },
   { name: "anu", password: "anuuthayaa" },
 ];
 
-// 🔐 LOGIN API
+// 🔐 LOGIN
 app.post("/login", (req, res) => {
   const { name, password } = req.body;
 
@@ -28,32 +29,28 @@ app.post("/login", (req, res) => {
     (u) => u.name === name && u.password === password
   );
 
-  if (user) {
-    res.json({ success: true, name });
-  } else {
-    res.json({ success: false });
-  }
+  res.json(user ? { success: true, name } : { success: false });
 });
 
 // 💬 + 🎵 SOCKET
 io.on("connection", (socket) => {
-  console.log("User connected");
-
-  // 💬 Chat
   socket.on("sendMessage", (msg) => {
     io.emit("receiveMessage", msg);
   });
 
-  // 🎵 Play Song Sync
   socket.on("playSong", (videoId) => {
     io.emit("playSong", videoId);
   });
-
-  socket.on("disconnect", () => {
-    console.log("User disconnected");
-  });
 });
 
-server.listen(5000, () => {
-  console.log("Server running on port 5000");
+// ❤️ HEALTH CHECK
+app.get("/", (req, res) => {
+  res.send("Server is running ❤️");
+});
+
+// ✅ PORT
+const PORT = process.env.PORT || 5000;
+
+server.listen(PORT, () => {
+  console.log("Server running on port " + PORT);
 });
